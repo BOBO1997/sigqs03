@@ -1,7 +1,6 @@
 from typing import List
 import numpy as np
 from pprint import pprint
-import time
 
 import sgs_algorithm
 from sgs_algorithm import sgs_algorithm

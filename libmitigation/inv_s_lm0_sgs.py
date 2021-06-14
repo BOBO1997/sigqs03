@@ -1,7 +1,6 @@
 from typing import List
 import numpy as np
 from pprint import pprint
-import time
 import copy
 
 import sgs_algorithm
@@ -37,7 +36,7 @@ class InvSLM0SGS(MitigationTools):
               counts: dict,
               shots: int = None) -> dict:
         """
-        O(s * n * 2^n) time and O(s) space
+        O(s * s * n) time and O(s) space
 
         Arguments
             counts: raw counts (dict of str to int)
