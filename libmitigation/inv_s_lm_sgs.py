@@ -34,7 +34,9 @@ class InvSLMSGS(MitigationTools):
     # OK
     def apply(self,
               counts: dict,
-              shots: int = None) -> dict:
+              shots: int = None,
+              sgs: bool = True,
+              rescale: bool = True) -> dict:
         """
         O(s * n * 2^n) time and O(s) space
 
@@ -82,8 +84,8 @@ class InvSLMSGS(MitigationTools):
 
         # algorithm by Smolin et al. # O(s * log(s)) time
         # print(x_hat_s)
-        x_tilde = sgs_algorithm(x_hat_s)
+        x_tilde = sgs_algorithm(x_hat_s) if sgs else x_hat_s
 
         print("main process: Done!")
-        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde}  # rescale to counts
+        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
         return mitigated_counts

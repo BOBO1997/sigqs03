@@ -33,7 +33,9 @@ class InvSGS(MitigationTools):
     # OK
     def apply(self,
               counts: dict,
-              shots: int = None) -> dict:
+              shots: int = None,
+              sgs: bool = True,
+              rescale: bool = True) -> dict:
         """
         O(s * n * 2^n) time and O(2^n) space
 
@@ -54,16 +56,14 @@ class InvSGS(MitigationTools):
         print("strict inverse + SGS algorithm")
 
         # mitigate raw counts y using tensored mitigation # total O(s * n * 2^n)
-        x = {state_idx: 0 for state_idx in range(
-            2 ** self.num_clbits)}  # O(s) space # e basis
+        x = {state_idx: 0 for state_idx in range(2 ** self.num_clbits)}  # O(s) space # e basis
         for state_idx in range(2 ** self.num_clbits):  # O(2^n) time
             x[state_idx] = self.mitigate_one_state(state_idx, y)  # O(s * n)
         print("sum of mitigated probability vector x:", sum(x.values()))
 
         # algorithm by Smolin et al. # O(n * 2^n) time
-        x_tilde = sgs_algorithm(x)
+        x_tilde = sgs_algorithm(x) if sgs else x
 
         print("main process: Done!")
-        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b")
-                                   : x_tilde[state] * shots for state in x_tilde}  # rescale to counts
+        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
         return mitigated_counts
