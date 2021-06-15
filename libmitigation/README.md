@@ -41,5 +41,5 @@ Total: $O(sn2^n)$ time, $O(s)$ space
 Total: $O(sn)$ time, $O(s)$ space
 
 1. Apply inverse of the calibration matrix to get the vector of the restricted elements with size $s$.
-2. Meet the sum-to-one condition using Lagrange multiplier.
+2. Meet the sum-to-one condition only using the first term of the Lagrange multiplier.
 3. SGS algorithm
