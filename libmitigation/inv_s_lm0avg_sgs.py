@@ -10,7 +10,7 @@ import mitigation_tools
 from mitigation_tools import MitigationTools
 
 
-class InvLMSGS(MitigationTools):
+class InvSLM0AVGSGS(MitigationTools):
 
     # OK
     def __init__(self,
@@ -38,7 +38,7 @@ class InvLMSGS(MitigationTools):
               sgs: bool = True,
               rescale: bool = True) -> dict:
         """
-        O(4^n) time and O(2^n) space
+        O(s * s * n) time and O(s) space
 
         Arguments
             counts: raw counts (dict of str to int)
@@ -53,39 +53,36 @@ class InvLMSGS(MitigationTools):
         # make probability vector (dict), O(s) time
         y = {int(state, 2): counts[state] / shots for state in counts}
 
-        print("Lagrange Multiplier + SGS algorithm")
+        print("Restriction to labels of y + Lagrange Multiplier + SGS algorithm")
 
-        # preprocess 1: compute sum of x, O(s * n * 2^n) time in total
+        # preprocess 1: compute sum of x, O(s * s * n) time in total
         sum_of_x = 0
-        x = {state_idx: 0 for state_idx in range(2 ** self.num_clbits)}  # O(s) space # e basis
-        for state_idx in range(2 ** self.num_clbits):  # O(2^n) time
+        x_s = {state_idx: 0 for state_idx in y}  # O(s) space # e basis
+        for state_idx in y:  # O(s) time
             sum_of_col = self.sum_of_tensored_vector(self.choose_vecs(state_idx, self.pinv_matrices))  # O(n) time
             sum_of_x += sum_of_col * y.get(state_idx, 0)
-            x[state_idx] = self.mitigate_one_state(state_idx, y)  # O(n * s) time
-        print("sum of mitigated probability vector x:", sum(x.values()))
-        print("sum_of_x:", sum_of_x)
+            x_s[state_idx] = self.mitigate_one_state(state_idx, y)  # O(n * s) time
+        print("sum of mitigated probability vector x_s:", sum(x_s.values()))
 
-        # preprocess 2: compute the denominator of delta naively, O(n * 2^n) time in total
-        delta_denom = 0
-        for state_idx in range(2 ** self.num_clbits):  # O(2^n) time
-            sum_of_vi = self.sum_of_tensored_vector(self.choose_vecs(state_idx, self.pinvVs))  # O(n) time
-            lambda_i = self.sum_of_tensored_vector(self.choose_vecs(state_idx, self.pinvSigmas))  # O(n) time
-            delta_denom += (sum_of_vi ** 2) / (lambda_i ** 2)
+        # preprocess 2: compute the denominator of delta only summing up the first term of the denominator, O(n) time in total
+        sum_of_vi = self.sum_of_tensored_vector(self.choose_vecs(0, self.pinvVs))  # O(n) time
+        lambda_i = self.sum_of_tensored_vector(self.choose_vecs(0, self.pinvSigmas))  # O(n) time
+        delta_denom = (sum_of_vi ** 2) / (lambda_i ** 2)  # O(1) time
         delta_coeff = (1 - sum_of_x) / delta_denom  # O(1) time
 
-        # prepare x_hat, O(4^n) time in total
-        x_hat = copy.deepcopy(x)
-        for col_idx in range(2 ** self.num_clbits):  # O(2^n) time
-            sum_of_vi = self.sum_of_tensored_vector(self.choose_vecs(col_idx, self.pinvVs))  # O(n) time
-            lambda_i = self.sum_of_tensored_vector(self.choose_vecs(col_idx, self.pinvSigmas))  # O(n) time
-            delta_col = sum_of_vi / (lambda_i ** 2)
-            v_col = self.v_basis(0, x_hat.keys())
-            for state_idx in x_hat: # O(2^n) time
-                x_hat[state_idx] += delta_coeff * delta_col * v_col.get(state_idx, 0)
-        print("sum of mitigated probability vector x_hat:", sum(x_hat.values()))
+        # prepare x_hat_s only using the first term Delta_0 # only choose column 0, O(s * n) time in total
+        x_hat_s = copy.deepcopy(x_s)
+        sum_of_vi = self.sum_of_tensored_vector(self.choose_vecs(0, self.pinvVs))  # O(n) time
+        lambda_i = self.sum_of_tensored_vector(self.choose_vecs(0, self.pinvSigmas))  # O(n) time
+        delta_col = sum_of_vi / (lambda_i ** 2)  # O(1) time
+        v_col = self.v_basis(0, x_hat_s.keys())  # O(s) time
+        for state_idx in x_hat_s:  # O(s) time
+            x_hat_s[state_idx] += delta_coeff * delta_col * v_col.get(state_idx, 0)  # O(1) time
+        print("sum of mitigated probability vector x_hat_s:", sum(x_hat_s.values()))
 
-        # algorithm by Smolin et al. # O(n * 2^n) time
-        x_tilde = sgs_algorithm(x_hat) if sgs else x_hat
+        # algorithm by Smolin et al. # O(s * log(s)) time
+        # print(x_hat_s)
+        x_tilde = sgs_algorithm(x_hat_s) if sgs else x_hat_s
 
         print("main process: Done!")
         mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts

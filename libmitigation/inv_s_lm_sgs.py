@@ -60,7 +60,7 @@ class InvSLMSGS(MitigationTools):
         x_s = {state_idx: 0 for state_idx in y}  # O(s) space # e basis
         for state_idx in y:  # O(s) time
             sum_of_col = self.sum_of_tensored_vector(self.choose_vecs(state_idx, self.pinv_matrices))  # O(n) time
-            sum_of_x += sum_of_col * y[state_idx]
+            sum_of_x += sum_of_col * y.get(state_idx, 0)
             x_s[state_idx] = self.mitigate_one_state(state_idx, y)  # O(n * s) time
         print("sum of mitigated probability vector x_s:", sum(x_s.values()))
 
@@ -80,7 +80,8 @@ class InvSLMSGS(MitigationTools):
             delta_col = sum_of_vi / (lambda_i ** 2)
             v_col = self.v_basis(0, x_hat_s.keys())
             for state_idx in x_hat_s:
-                x_hat_s[state_idx] += delta_coeff * delta_col * v_col[state_idx]
+                x_hat_s[state_idx] += delta_coeff * delta_col * v_col.get(state_idx, 0)
+        print("sum of mitigated probability vector x_hat_s:", sum(x_hat_s.values()))
 
         # algorithm by Smolin et al. # O(s * log(s)) time
         # print(x_hat_s)
