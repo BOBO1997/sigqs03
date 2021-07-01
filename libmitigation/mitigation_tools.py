@@ -73,12 +73,9 @@ class MitigationTools(SVDs):
             # O(n) time
             for pinv_mat, pos_qubits in zip(self.pinv_matrices, self.mit_pattern):
                 # if completely tensored, then len(pos_clbits) == 1 -> O(1) time
-                pos_clbits = [self.qubits_to_clbits[qubit]
-                              for qubit in pos_qubits]
-                first_index = self.index_of_mat(
-                    target_state, pos_clbits)  # O(1) time
-                second_index = self.index_of_mat(
-                    source_state, pos_clbits)  # O(1) time
+                pos_clbits = [self.qubits_to_clbits[qubit] for qubit in pos_qubits]
+                first_index = self.index_of_mat(target_state, pos_clbits)  # O(1) time
+                second_index = self.index_of_mat(source_state, pos_clbits)  # O(1) time
                 tensor_elem *= pinv_mat[first_index, second_index]  # O(1) time
             new_count += tensor_elem * counts[source_state]  # O(1) time
         return new_count
@@ -100,11 +97,9 @@ class MitigationTools(SVDs):
             tensor_elem = 1.
             for pinv_mat, pos_qubits in zip(pinv_mats, self.mit_pattern):  # O(n) time
                 # if completely tensored, then len(pos_clbits) == 1 -> O(1) time
-                pos_clbits = [self.qubits_to_clbits[qubit]
-                              for qubit in pos_qubits]
+                pos_clbits = [self.qubits_to_clbits[qubit] for qubit in pos_qubits]
                 first_index = self.index_of_mat(label, pos_clbits)  # O(1) time
-                second_index = self.index_of_mat(
-                    col_idx, pos_clbits)  # O(1) time
+                second_index = self.index_of_mat(col_idx, pos_clbits)  # O(1) time
                 tensor_elem *= pinv_mat[first_index, second_index]  # O(1) time
             col_i[label] = tensor_elem
 
@@ -147,6 +142,17 @@ class MitigationTools(SVDs):
         return sum_val
 
     # ====================================== for debug ========================================== #
+    
+    # OK
+    def listup_sigmas(self) -> List[float]:
+        """
+        List up all the sigma_i values to see their distribution
+        For debug and inspection.
+        """
+        self.run_inv_svd()
+        # O(n) time
+        return [self.sum_of_tensored_vector(self.choose_vecs(state_idx, self.pinvSigmas)) for state_idx in range(2 ** self.num_clbits)]
+    
     # OK
     def listup_deltas(self, counts: dict, shots: int = None, basis: str = "v") -> List[float]:
         """
