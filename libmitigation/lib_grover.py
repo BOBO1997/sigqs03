@@ -48,7 +48,7 @@ def Rinv(qc, qx, qx_measure, nbit, b_max):
     qc.ry(-b_max / 2**nbit * 2 * 0.5, qx_measure)
 
 # OK
-def reflect(qc, qx, qx_measure, qx_ancilla, nbit, b_max):
+def reflect(qc, qx, qx_measure, qx_ancilla, nbit, b_max, barrier=False):
     """
         Computing reflection operator (I - 2|0><0|)
             qc: quantum circuit
@@ -61,12 +61,14 @@ def reflect(qc, qx, qx_measure, qx_ancilla, nbit, b_max):
     for i in range(nbit):
         qc.x(qx[i])
     qc.x(qx_measure[0])
-    qc.barrier()  # format the circuits visualization
+    if barrier:
+        qc.barrier()  # format the circuits visualization
     # multi_control_NOT(qc, qx, qx_measure, qx_ancilla, nbit, b_max)
     qc.h(qx_measure)
     qc.mcx(qx, qx_measure)
     qc.h(qx_measure)
-    qc.barrier()  # format the circuits visualization
+    if barrier:
+        qc.barrier()  # format the circuits visualization
     qc.x(qx_measure[0])
     for i in range(nbit):
         qc.x(qx[i])
@@ -74,7 +76,7 @@ def reflect(qc, qx, qx_measure, qx_ancilla, nbit, b_max):
 
 # OK
 # This is to implement Grover Operator
-def Q_grover(qc, qx, qx_measure, qx_ancilla, nbit, b_max):
+def Q_grover(qc, qx, qx_measure, qx_ancilla, nbit, b_max, barrier=False):
     """
         The Grover operator: R P (I - 2|0><0|) P^+ R^+ U_psi_0 
             qc: quantum circuit
@@ -85,19 +87,23 @@ def Q_grover(qc, qx, qx_measure, qx_ancilla, nbit, b_max):
             b_max: upper limit of integral
     """
     P(qc, qx, nbit)
-    qc.barrier()  # format the circuits visualization
+    if barrier:
+        qc.barrier()  # format the circuits visualization
     R(qc, qx, qx_measure, nbit, b_max)
     qc.z(qx_measure[0])
     Rinv(qc, qx, qx_measure, nbit, b_max)
-    qc.barrier()  # format the circuits visualization
+    if barrier:
+        qc.barrier()  # format the circuits visualization
     P(qc, qx, nbit)
-    qc.barrier()  # format the circuits visualization
-    reflect(qc, qx, qx_measure, qx_ancilla, nbit, b_max)
-    qc.barrier()  # format the circuits visualization
+    if barrier:
+        qc.barrier()  # format the circuits visualization
+    reflect(qc, qx, qx_measure, qx_ancilla, nbit, b_max, barrier)
+    if barrier:
+        qc.barrier()  # format the circuits visualization
 
 
 # OK
-def create_grover_circuit(numebr_grover_list, nbit, b_max):
+def create_grover_circuit(numebr_grover_list, nbit, b_max, barrier=False):
     """
         To generate quantum circuits running Grover operators with number of iterations in number_grover_list
             numebr_grover_list: list of number of Grover operators
@@ -114,7 +120,7 @@ def create_grover_circuit(numebr_grover_list, nbit, b_max):
         qc = QuantumCircuit(qx, qx_measure, cr)
         qx_ancilla = QuantumRegister(1)
         for ikAA in range(numebr_grover_list[igrover]):
-            Q_grover(qc, qx, qx_measure, qx_ancilla, nbit, b_max)
+            Q_grover(qc, qx, qx_measure, qx_ancilla, nbit, b_max, barrier)
         qc.measure(qx, cr[:-1])  # modified grover
         qc.measure(qx_measure, cr[-1])  # modified grover
         qc_list.append(qc)
