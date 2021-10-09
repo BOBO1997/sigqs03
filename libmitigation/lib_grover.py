@@ -129,7 +129,7 @@ def create_grover_circuit(numebr_grover_list, nbit, b_max, barrier=False):
 
 
 # OK
-def run_grover(qc_list, number_grover_list, shots_list, backend, noise_model=None):
+def run_grover(qc_list, number_grover_list, shots_list, backend, noise_model=None, seed_transpiler=None, seed_simulator=None):
     """
         Run the quantum circuits returned by create_grover_circuit()
             qc_list: list of quantum circuits
@@ -144,8 +144,7 @@ def run_grover(qc_list, number_grover_list, shots_list, backend, noise_model=Non
     for k in range(len(number_grover_list)):
         t1 = time.time()
         print(k, "th round with", number_grover_list[k], "oracles")
-        job = execute(qc_list[k], backend=backend,
-                      shots=shots_list[k], noise_model=noise_model)
+        job = execute(qc_list[k], backend=backend, shots=shots_list[k], noise_model=noise_model, seed_transpiler=seed_transpiler, seed_simulator=seed_simulator)
         lapse = 0
         interval = 0.00001
         time.sleep(interval)

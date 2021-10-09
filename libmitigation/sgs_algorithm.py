@@ -4,7 +4,7 @@ from pprint import pprint
 import priority_queue
 from priority_queue import priority_queue
 
-def sgs_algorithm(x: dict) -> dict:
+def sgs_algorithm(x: dict, silent = False) -> dict:
     """
     The negative cancellation algorithm by Smolin, Gambetta, and Smith.
     O(NlogN) time, O(N) memory to the size of x: N
@@ -22,7 +22,8 @@ def sgs_algorithm(x: dict) -> dict:
         if x[state_idx] > 0:
             pq.push((state_idx, x[state_idx]))  # O(log(N)) time
             sum_of_x += x[state_idx]
-    print("number of positive values: ", pq.size())
+    if not silent:
+        print("number of positive values: ", pq.size())
 
     negative_accumulator = 1 - sum_of_x
     if negative_accumulator >= 0:

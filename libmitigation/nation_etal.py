@@ -9,7 +9,7 @@ from sgs_algorithm import sgs_algorithm
 import mitigation_tools
 from mitigation_tools import MitigationTools
 
-class InvSGS(MitigationTools):
+class Nation(MitigationTools):
 
     # OK
     def __init__(self,
@@ -29,17 +29,22 @@ class InvSGS(MitigationTools):
                          cal_matrices=cal_matrices,
                          mit_pattern=mit_pattern,
                          meas_layout=meas_layout)
+        self.A_tilde = None
 
+    def prepare_A_tilde(self, keys: list, d: int):
+        self.A_tilde = np.zeros( (len(keys), len(keys)) )
+        for i, label in enumerate(keys):
+            pass
+            
+        
     # OK
     def apply(self,
               counts: dict,
               shots: int = None,
-              sgs: bool = True,
+              d: bool = True,
               rescale: bool = True,
               silent: bool = False) -> dict:
         """
-        O(s * n * 2^n) time and O(2^n) space
-
         Arguments
             counts: raw counts (dict of str to int)
             shots: total number of shot (int)
@@ -55,17 +60,16 @@ class InvSGS(MitigationTools):
         y = {int(state, 2): counts[state] / shots for state in counts}
 
         if not silent:
-            print("strict inverse + SGS algorithm")
+            print("Method by Nation, Kang, Sundaresan, and Gambatta")
 
-        # mitigate raw counts y using tensored mitigation # total O(s * n * 2^n)
+        # Prepare small calibration matrix A tilde
+        self.prepare_A_tilde(list(y.keys()), d)
+        
         x = {state_idx: 0 for state_idx in range(2 ** self.num_clbits)}  # O(s) space # e basis
         for state_idx in range(2 ** self.num_clbits):  # O(2^n) time
             x[state_idx] = self.mitigate_one_state(state_idx, y)  # O(s * n)
         if not silent:
             print("sum of mitigated probability vector x:", sum(x.values()))
-
-        # algorithm by Smolin et al. # O(n * 2^n) time
-        x_tilde = sgs_algorithm(x, silent=silent) if sgs else x
         
         if not silent:
             print("main process: Done!")

@@ -34,7 +34,8 @@ class InvSSGS(MitigationTools):
               counts: dict,
               shots: int = None,
               sgs: bool = True,
-              rescale: bool = True) -> dict:
+              rescale: bool = True,
+              silent: bool = False) -> dict:
         """
         O(s * s * n) time and O(s) space
 
@@ -51,16 +52,19 @@ class InvSSGS(MitigationTools):
         # make probability vector (dict)
         y = {int(state, 2): counts[state] / shots for state in counts}
 
-        print("Restriction to labels of y + SGS algorithm")
+        if not silent:
+            print("Restriction to labels of y + SGS algorithm")
         # O(s * s * n) time
         x_s = {state_idx: 0 for state_idx in y}  # O(s) space # e basis
         for state_idx in y:  # O(s) time
             x_s[state_idx] = self.mitigate_one_state(state_idx, y)  # O(n * s) time
-        print("sum of mitigated probability vector x_s:", sum(x_s.values()))
+        if not silent:
+            print("sum of mitigated probability vector x_s:", sum(x_s.values()))
 
         # algorithm by Smolin et al. # O(s * log(s)) time
         x_tilde = sgs_algorithm(x_s) if sgs else x_s
 
-        print("main process: Done!")
+        if not silent:
+            print("main process: Done!")
         mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
         return mitigated_counts

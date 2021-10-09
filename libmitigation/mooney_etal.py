@@ -60,7 +60,8 @@ class MooneyEtal(MitigationTools):
               threshold: float,
               shots: int = None,
               sgs: bool = True,
-              rescale: bool = True) -> dict:
+              rescale: bool = True,
+              silent: bool = False) -> dict:
         """
         The algorithm by Mooney et al.
 
@@ -77,7 +78,8 @@ class MooneyEtal(MitigationTools):
         t1 = time.time()
         # make probability vector (dict), O(s) time
         y = {int(state, 2): counts[state] / shots for state in counts}
-        print("The heuristcs by Mooney et al. + SGS algorithm")
+        if not silent:
+            print("The heuristcs by Mooney et al. + SGS algorithm")
 
         for pinv_mat, pos_qubits in zip(self.pinv_matrices, self.mit_pattern): # O(n) time
             x = dict()
@@ -94,16 +96,19 @@ class MooneyEtal(MitigationTools):
             y = x
 
         sum_of_x = sum(x.values())
-        print(x)
-        print("sum of counts:", sum_of_x)
+        if not silent:
+            print(x)
+            print("sum of counts:", sum_of_x)
         if sum_of_x < 0:
             print("negative counts")
 
         t2 = time.time()
-        print(t2 - t1, "s")
+        if not silent:
+            print(t2 - t1, "s")
         # algorithm by Smolin et al. # O(s * log(s)) time
-        x_tilde = sgs_algorithm(x) if sgs else x
+        x_tilde = sgs_algorithm(x, silent=silent) if sgs else x
 
-        print("main process: Done!")
+        if not silent:
+            print("main process: Done!")
         mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde  # rescale to counts
         return mitigated_counts

@@ -37,7 +37,8 @@ class InvSLM0SGS(MitigationTools):
               counts: dict,
               shots: int = None,
               sgs: bool = True,
-              rescale: bool = True) -> dict:
+              rescale: bool = True,
+              silent: bool = False) -> dict:
         """
         O(s * s * n) time and O(s) space
 
@@ -54,7 +55,8 @@ class InvSLM0SGS(MitigationTools):
         # make probability vector (dict), O(s) time
         y = {int(state, 2): counts[state] / shots for state in counts}
 
-        print("Restriction to labels of y + Lagrange Multiplier + SGS algorithm")
+        if not silent:
+            print("Restriction to labels of y + Lagrange Multiplier + SGS algorithm")
 
         t1 = time.time()
         # preprocess 1: compute sum of x, O(s * s * n) time in total
@@ -64,7 +66,8 @@ class InvSLM0SGS(MitigationTools):
             sum_of_col = self.sum_of_tensored_vector(self.choose_vecs(state_idx, self.pinv_matrices))  # O(n) time
             sum_of_x += sum_of_col * y.get(state_idx, 0)
             x_s[state_idx] = self.mitigate_one_state(state_idx, y)  # O(n * s) time
-        print("sum of mitigated probability vector x_s:", sum(x_s.values()))
+        if not silent:
+            print("sum of mitigated probability vector x_s:", sum(x_s.values()))
 
         # preprocess 2: compute the denominator of delta only summing up the first term of the denominator, O(n) time in total
         sum_of_vi = self.sum_of_tensored_vector(self.choose_vecs(0, self.pinvVs))  # O(n) time
@@ -80,14 +83,17 @@ class InvSLM0SGS(MitigationTools):
         v_col = self.v_basis(0, x_hat_s.keys())  # O(s * n) time
         for state_idx in x_hat_s:  # O(s) time
             x_hat_s[state_idx] += delta_coeff * delta_col * v_col.get(state_idx, 0)  # O(1) time
-        print("sum of mitigated probability vector x_hat_s:", sum(x_hat_s.values()))
+        if not silent:
+            print("sum of mitigated probability vector x_hat_s:", sum(x_hat_s.values()))
 
         t2 = time.time()
-        print(t2 - t1, "s")
+        if not silent:
+            print(t2 - t1, "s")
         # algorithm by Smolin et al. # O(s * log(s)) time
         # print(x_hat_s)
-        x_tilde = sgs_algorithm(x_hat_s) if sgs else x_hat_s
+        x_tilde = sgs_algorithm(x_hat_s, silent=silent) if sgs else x_hat_s
 
-        print("main process: Done!")
+        if not silent:
+            print("main process: Done!")
         mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
         return mitigated_counts
