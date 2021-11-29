@@ -3,13 +3,13 @@ import numpy as np
 from pprint import pprint
 import time
 
-import sgs_algorithm
-from sgs_algorithm import sgs_algorithm
-
-import mitigation_tools
 from mitigation_tools import MitigationTools
 
-class Nation(MitigationTools):
+from scipy.sparse.linalg import gmres
+
+from sgs_algorithm import sgs_algorithm
+
+class NationEtal(MitigationTools):
 
     # OK
     def __init__(self,
@@ -29,14 +29,23 @@ class Nation(MitigationTools):
                          cal_matrices=cal_matrices,
                          mit_pattern=mit_pattern,
                          meas_layout=meas_layout)
-        self.A_tilde = None
 
-    def prepare_A_tilde(self, keys: list, d: int):
-        self.A_tilde = np.zeros( (len(keys), len(keys)) )
-        for i, label in enumerate(keys):
-            pass
-            
-        
+    def prepare_nation_A_tilde(self, keys: list):
+        """
+        prepare the numpy 2d matrix with the indices selected from keys
+        """
+        self.prepare_raw_A_tilde(keys)
+
+        for j, col_key in enumerate(keys):
+            sum_of_col = 0
+            for i, row_key in enumerate(keys):
+                sum_of_col += self.A_tilde[i][j]
+            for i, row_key in enumerate(keys):
+                self.A_tilde[i][j] /= sum_of_col
+
+    def apply_inverse_A(self, extended_y):
+        return np.linalg.inv(self.A_tilde) @ extended_y
+
     # OK
     def apply(self,
               counts: dict,
@@ -57,21 +66,40 @@ class Nation(MitigationTools):
             shots = sum(counts.values())
 
         # make probability vector (dict)
-        y = {int(state, 2): counts[state] / shots for state in counts}
+        # y = {int(state, 2): counts[state] / shots for state in counts}
+        y = {state: counts[state] / shots for state in counts}
+        print(y)
 
         if not silent:
             print("Method by Nation, Kang, Sundaresan, and Gambatta")
 
         # Prepare small calibration matrix A tilde
-        self.prepare_A_tilde(list(y.keys()), d)
+        extended_keys = self.extend_keys(set(y.keys()), d)
+        sorted_extended_keys = sorted(extended_keys)
+        self.prepare_nation_A_tilde(sorted_extended_keys)
+
+        keys_to_indices = dict()
+        for i, key in enumerate(sorted_extended_keys):
+            keys_to_indices[key] = i
         
-        x = {state_idx: 0 for state_idx in range(2 ** self.num_clbits)}  # O(s) space # e basis
-        for state_idx in range(2 ** self.num_clbits):  # O(2^n) time
-            x[state_idx] = self.mitigate_one_state(state_idx, y)  # O(s * n)
-        if not silent:
-            print("sum of mitigated probability vector x:", sum(x.values()))
-        
+        extended_y = self.extend_vectors(y, keys_to_indices)
+        x, _ = gmres(self.A_tilde, extended_y)
+        # x = np.linalg.inv(self.A_tilde) @ extended_y
+        # x = self.apply_inverse_A(extended_y)
         if not silent:
             print("main process: Done!")
-        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
+            print("sum of mitigated probability vector x:", np.sum(x))
+            print(x)
+        
+        x_hat = dict()
+        for key, index in keys_to_indices.items():
+            x_hat[key] = x[index]
+
+        if not silent:
+            print("start sgs_algorithm")
+
+        x_tilde = sgs_algorithm(x_hat)
+
+        mitigated_counts = {state: x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
+        # mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
         return mitigated_counts

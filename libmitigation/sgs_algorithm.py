@@ -1,10 +1,11 @@
+from typing import Union
 import numpy as np
 from pprint import pprint
 
 import priority_queue
 from priority_queue import priority_queue
 
-def sgs_algorithm(x: dict, silent = False) -> dict:
+def sgs_algorithm(x: Union[dict, np.array], silent = False) -> dict:
     """
     The negative cancellation algorithm by Smolin, Gambetta, and Smith.
     O(NlogN) time, O(N) memory to the size of x: N

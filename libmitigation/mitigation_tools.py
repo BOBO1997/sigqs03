@@ -5,7 +5,9 @@ from pprint import pprint
 import svds
 from svds import SVDs
 
-import draw_heatmap
+from itertools import combinations
+import copy
+
 from draw_heatmap import draw_heatmap
 
 class MitigationTools(SVDs):
@@ -28,6 +30,9 @@ class MitigationTools(SVDs):
                          cal_matrices=cal_matrices,
                          mit_pattern=mit_pattern,
                          meas_layout=meas_layout)
+
+    
+        self.A_tilde = None
 
     # OK
     def index_of_mat(self, state: Union[str, int], pos_clbits: List[int]) -> int:
@@ -140,6 +145,59 @@ class MitigationTools(SVDs):
         for vec in reversed(vecs):
             sum_val *= sum(vec)
         return sum_val
+
+    # ====================================== for nation etal ==================================== #
+
+    # OK, O(n)
+    def change_bit_at_poses(self, key: str, poses: int) -> str:
+        for pos in poses:
+            key = key[:pos] + "1" + key[pos +
+                                        1:] if key[pos] == "0" else key[:pos] + "0" + key[pos+1:]
+        return key
+
+    # OK, O(n * 2^d)
+    def extend_keys(self, original_keys: set, max_dist: int) -> set:
+
+        extended_key_set = copy.deepcopy(original_keys)
+        print(original_keys)
+
+        for key in original_keys:
+            n = len(key)
+            for d in range(max_dist):
+                combs = combinations(range(n), d + 1)
+                for comb in combs:
+                    new_key = self.change_bit_at_poses(key, comb)
+                    extended_key_set.add(new_key)
+        return extended_key_set
+
+    def extend_vectors(self, y: dict, keys_to_indices: dict):
+        extended_y = np.zeros(len(list(keys_to_indices)))
+        for key, value in y.items():
+            extended_y[keys_to_indices[key]] = value
+        return extended_y
+
+    # OK, O(n)
+    def compute_mat_elem(self, row_key: str, col_key: str) -> float:
+        """
+        used as a subrouting in self.prepare_A_tilde
+        O(num_clbits)
+        """
+        ret = 1.0
+        # print(row_key, col_key)
+        for mat_idx, (i, j) in enumerate(zip(row_key, col_key)):
+            # print(i, j)
+            ret *= self.cal_matrices[mat_idx][int(i)][int(j)]
+        return ret
+
+    # O(n * s * s), where s is the number of extended keys
+    def prepare_raw_A_tilde(self, keys: list):
+        """
+        prepare the numpy 2d matrix with the indices selected from keys
+        """
+        self.A_tilde = np.zeros((len(keys), len(keys)))
+        for i, row_key in enumerate(keys):
+            for j, col_key in enumerate(keys):
+                self.A_tilde[i][j] = self.compute_mat_elem(row_key, col_key)
 
     # ====================================== for debug ========================================== #
     
