@@ -7,7 +7,6 @@ import copy
 import sgs_algorithm
 from sgs_algorithm import sgs_algorithm
 
-import mitigation_tools
 from mitigation_tools import MitigationTools
 
 
@@ -86,12 +85,15 @@ class InvSLM0SGS(MitigationTools):
         if not silent:
             print("sum of mitigated probability vector x_hat_s:", sum(x_hat_s.values()))
 
-        t2 = time.time()
-        if not silent:
-            print(t2 - t1, "s")
         # algorithm by Smolin et al. # O(s * log(s)) time
         # print(x_hat_s)
         x_tilde = sgs_algorithm(x_hat_s, silent=silent) if sgs else x_hat_s
+
+        t2 = time.time()
+        self.time = t2 - t1
+
+        if not silent:
+            print(t2 - t1, "s")
 
         if not silent:
             print("main process: Done!")

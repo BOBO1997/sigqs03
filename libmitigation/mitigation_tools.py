@@ -33,6 +33,7 @@ class MitigationTools(SVDs):
 
     
         self.A_tilde = None
+        self.time = -1
 
     # OK
     def index_of_mat(self, state: Union[str, int], pos_clbits: List[int]) -> int:
@@ -159,7 +160,6 @@ class MitigationTools(SVDs):
     def extend_keys(self, original_keys: set, max_dist: int) -> set:
 
         extended_key_set = copy.deepcopy(original_keys)
-        print(original_keys)
 
         for key in original_keys:
             n = len(key)
@@ -183,9 +183,7 @@ class MitigationTools(SVDs):
         O(num_clbits)
         """
         ret = 1.0
-        # print(row_key, col_key)
         for mat_idx, (i, j) in enumerate(zip(row_key, col_key)):
-            # print(i, j)
             ret *= self.cal_matrices[mat_idx][int(i)][int(j)]
         return ret
 

@@ -1,18 +1,17 @@
 from typing import List
+import time
 import numpy as np
 from pprint import pprint
 
-import sgs_algorithm
 from sgs_algorithm import sgs_algorithm
 
 from scipy.optimize import minimize
 # import scipy.linalg as la
 
-import mitigation_tools
 from mitigation_tools import MitigationTools
 
 
-class InvSSciPySGS(MitigationTools):
+class InvSLstsq(MitigationTools):
 
     # OK
     def __init__(self,
@@ -55,10 +54,13 @@ class InvSSciPySGS(MitigationTools):
 
         # make probability vector (dict)
         y = {int(state, 2): counts[state] / shots for state in counts}
-
+        
         if not silent:
-            print("Restriction to labels of y + SciPy optimization + SGS algorithm")
+            print("Restriction to labels of y + whole SciPy optimization")
         # O(s * s * n) time
+
+        t1 = time.time()
+
         x_s = {state_idx: 0 for state_idx in y}  # O(s) space # e basis
         for state_idx in y:  # O(s) time
             x_s[state_idx] = self.mitigate_one_state(
@@ -80,19 +82,20 @@ class InvSSciPySGS(MitigationTools):
         x0 = np.random.rand(len(list(x_s.keys())))
         x0 = x0 / sum(x0)
         cons = ({'type': 'eq', 'fun': lambda x: 1 - sum(x)})
-        # bnds = tuple((0, 1) for x in x0)
-        res = minimize(fun, x0, method='SLSQP', constraints=cons, tol=1e-6)
+        bnds = tuple((0, 1) for x in x0)
+        res = minimize(fun, x0, method='SLSQP', constraints=cons, bounds=bnds, tol=1e-6)
+
+        t2 = time.time()
+        self.time = t2 - t1
+
+        if not silent:
+            print(t2 - t1, "s")
 
         x_tilde = {}
         for i, k in enumerate(keys):
             x_tilde[k] = res.x[i]
         if not silent:
             print("sum of mitigated probability vector x_tilde:", sum(x_tilde.values()))
-        
-        x_tilde = sgs_algorithm(x_tilde, silent=silent)
-
-        if not silent:
             print("main process: Done!")
-        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b")
-                                   : x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde  # rescale to counts
+        mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde  # rescale to counts
         return mitigated_counts

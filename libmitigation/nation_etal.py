@@ -50,7 +50,7 @@ class NationEtal(MitigationTools):
     def apply(self,
               counts: dict,
               shots: int = None,
-              d: bool = True,
+              d: int = 0,
               rescale: bool = True,
               silent: bool = False) -> dict:
         """
@@ -68,10 +68,11 @@ class NationEtal(MitigationTools):
         # make probability vector (dict)
         # y = {int(state, 2): counts[state] / shots for state in counts}
         y = {state: counts[state] / shots for state in counts}
-        print(y)
 
         if not silent:
             print("Method by Nation, Kang, Sundaresan, and Gambatta")
+
+        t1 = time.time()
 
         # Prepare small calibration matrix A tilde
         extended_keys = self.extend_keys(set(y.keys()), d)
@@ -89,7 +90,6 @@ class NationEtal(MitigationTools):
         if not silent:
             print("main process: Done!")
             print("sum of mitigated probability vector x:", np.sum(x))
-            print(x)
         
         x_hat = dict()
         for key, index in keys_to_indices.items():
@@ -99,6 +99,12 @@ class NationEtal(MitigationTools):
             print("start sgs_algorithm")
 
         x_tilde = sgs_algorithm(x_hat)
+
+        t2 = time.time()
+        self.time = t2 - t1
+
+        if not silent:
+            print(t2 - t1, "s")
 
         mitigated_counts = {state: x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
         # mitigated_counts = {format(state, "0"+str(self.num_clbits)+"b"): x_tilde[state] * shots for state in x_tilde} if rescale else x_tilde # rescale to counts
